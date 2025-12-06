@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
-import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import { ElevenLabsClient } from "elevenlabs"; // Revertido a la librería original
 import { Readable } from "stream";
 
 dotenv.config();
@@ -46,13 +46,16 @@ app.post("/api/speak", async (req, res) => {
 
     const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
 
-    const audioStream = await elevenlabsClient.textToSpeech.convert(voiceId, {
+    // Usar el método generate de la librería original
+    const audio = await elevenlabsClient.generate({
+      voice: voiceId,
       text: recognizedText,
-      modelId: "eleven_multilingual_v2",
+      model_id: "eleven_multilingual_v2",
     });
 
     res.set("Content-Type", "audio/mpeg");
-    Readable.fromWeb(audioStream as any).pipe(res);
+    // La librería original devuelve un ReadableStream que se puede pipear directamente
+    audio.pipe(res);
 
   } catch (error) {
     console.error("Error en el endpoint /api/speak:", error);

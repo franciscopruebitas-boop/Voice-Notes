@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@elevenlabs/elevenlabs-js": "0.0.1",
+    "elevenlabs": "^1.59.0",
     "@google-cloud/vision": "^4.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
