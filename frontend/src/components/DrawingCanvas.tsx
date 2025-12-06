@@ -1,4 +1,4 @@
-import React, { useRef, useState, useImperativeHandle, forwardRef } from "react";
+import { useRef, useState, useImperativeHandle, forwardRef } from "react";
 import { Stage, Layer, Line, Rect } from "react-konva";
 import Konva from "konva";
 
