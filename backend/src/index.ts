@@ -10,13 +10,6 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Eliminamos el middleware cors por ahora para depurar
-// const corsOptions = {
-//   origin: "*",
-//   optionsSuccessStatus: 200,
-// };
-// app.use(cors(corsOptions));
-
 const visionClient = new ImageAnnotatorClient();
 const elevenlabsClient = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
@@ -28,16 +21,19 @@ app.get("/", (req, res) => {
   res.send("Hello from the backend!");
 });
 
-app.post("/api/speak", async (req, res) => {
-  // Establecer la cabecera CORS manualmente para depuración
+// Manejar peticiones OPTIONS (preflight)
+app.options("/api/speak", (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.sendStatus(200);
+});
 
-  // Manejar peticiones OPTIONS (preflight)
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
+app.post("/api/speak", async (req, res) => {
+  // Establecer la cabecera CORS manualmente para depuración en POST también
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   try {
     const { image } = req.body;
