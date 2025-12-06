@@ -34,7 +34,7 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3001/api/speak", {
+      const response = await fetch("https://voice-notes-c9ux.onrender.com", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: imageDataUrl }),
