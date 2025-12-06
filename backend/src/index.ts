@@ -1,5 +1,5 @@
 import express from "express";
-import cors from "cors";
+import cors from "cors"; // Mantener la importación por si acaso, pero no se usará directamente
 import dotenv from "dotenv";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { ElevenLabsClient } from "elevenlabs";
@@ -10,11 +10,12 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-const corsOptions = {
-  origin: "*", // Temporalmente permitir todos los orígenes para depuración
-  optionsSuccessStatus: 200,
-};
-app.use(cors(corsOptions));
+// Eliminamos el middleware cors por ahora para depurar
+// const corsOptions = {
+//   origin: "*",
+//   optionsSuccessStatus: 200,
+// };
+// app.use(cors(corsOptions));
 
 const visionClient = new ImageAnnotatorClient();
 const elevenlabsClient = new ElevenLabsClient({
@@ -28,6 +29,16 @@ app.get("/", (req, res) => {
 });
 
 app.post("/api/speak", async (req, res) => {
+  // Establecer la cabecera CORS manualmente para depuración
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Manejar peticiones OPTIONS (preflight)
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
   try {
     const { image } = req.body;
     if (!image) {
