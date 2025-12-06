@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
-import { ElevenLabsClient } from "elevenlabs"; // Revertido a la librería original
+import { ElevenLabsClient } from "elevenlabs";
 import { Readable } from "stream";
 
 dotenv.config();
@@ -11,7 +11,11 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    process.env.FRONTEND_URL || "https://your-frontend-app.onrender.com" // Añadir la URL del frontend desplegado
+  ],
   optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
@@ -46,7 +50,6 @@ app.post("/api/speak", async (req, res) => {
 
     const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
 
-    // Usar el método generate de la librería original
     const audio = await elevenlabsClient.generate({
       voice: voiceId,
       text: recognizedText,
@@ -54,7 +57,6 @@ app.post("/api/speak", async (req, res) => {
     });
 
     res.set("Content-Type", "audio/mpeg");
-    // La librería original devuelve un ReadableStream que se puede pipear directamente
     audio.pipe(res);
 
   } catch (error) {
