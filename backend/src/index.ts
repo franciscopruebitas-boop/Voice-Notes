@@ -11,11 +11,7 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    process.env.FRONTEND_URL || "https://your-frontend-app.onrender.com" // Añadir la URL del frontend desplegado
-  ],
+  origin: "*", // Temporalmente permitir todos los orígenes para depuración
   optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
