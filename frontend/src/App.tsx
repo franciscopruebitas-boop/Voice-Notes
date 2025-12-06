@@ -9,6 +9,9 @@ function App() {
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
+  // Obtener la URL del backend desde las variables de entorno de Vite
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+
   useEffect(() => {
     const handleResize = () => {
       setDimensions({
@@ -34,7 +37,7 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch("https://voice-notes-c9ux.onrender.com", {
+      const response = await fetch(`${backendUrl}/api/speak`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: imageDataUrl }),
