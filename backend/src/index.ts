@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { ElevenLabsClient } from "elevenlabs";
 import { Readable } from "stream";
+import { JWT } from "google-auth-library";
+
 
 dotenv.config();
 
@@ -13,8 +15,13 @@ const port = process.env.PORT || 3001;
 // Aplicar el middleware CORS globalmente y al principio
 app.use(cors());
 
-const visionClient = new ImageAnnotatorClient({
-  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON ?? "{}"),
+const credentials = JSON.parse(
+  Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64!, "base64").toString()
+);
+
+const visionClient = new textToSpeech.TextToSpeechClient({
+  credentials,
+  projectId: credentials.project_id,
 });
 
 const elevenlabsClient = new ElevenLabsClient({
