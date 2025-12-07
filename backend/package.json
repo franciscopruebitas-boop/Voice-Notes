@@ -11,10 +11,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "elevenlabs": "^1.59.0",
-    "@google-cloud/vision": "^4.0.2",
+    "@google-cloud/vision": "^4.3.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "elevenlabs": "^1.59.0",
     "express": "^4.19.2"
   },
   "devDependencies": {
