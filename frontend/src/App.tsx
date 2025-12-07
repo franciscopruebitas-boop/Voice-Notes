@@ -41,7 +41,7 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${backendUrl}api/speak`, {
+      const response = await fetch(`${backendUrl}/api/speak`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: imageDataUrl }),
