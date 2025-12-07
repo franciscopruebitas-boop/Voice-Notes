@@ -3,77 +3,76 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { ElevenLabsClient } from "elevenlabs";
-import { Readable } from "stream";
-import { JWT } from "google-auth-library";
-import vision from "@google-cloud/vision";
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Aplicar el middleware CORS globalmente y al principio
 app.use(cors());
+app.use(express.json({ limit: "10mb" }));
 
-const credentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
-if (!credentialsBase64) {
-  throw new Error("GOOGLE_CREDENTIALS_BASE64 no está definida");
+// ============================
+// GOOGLE VISION - CREDENCIALES
+// ============================
+const base64 = process.env.GOOGLE_CREDENTIALS_BASE64;
+
+if (!base64) {
+  console.error("❌ ERROR: GOOGLE_CREDENTIALS_BASE64 no está definida");
+  process.exit(1);
 }
 
-const credentials = JSON.parse(
-  Buffer.from(credentialsBase64, "base64").toString("utf8")
-);
+let credentials;
 
-const visionClient = new ImageAnnotatorClient({
-  credentials,
-});
+try {
+  const json = Buffer.from(base64, "base64").toString("utf8");
+  credentials = JSON.parse(json);
 
-const elevenlabsClient = new ElevenLabsClient({
+  if (!credentials.client_email || !credentials.private_key) {
+    throw new Error("Credenciales incompletas");
+  }
+
+  console.log("✔ Credenciales de Google cargadas correctamente");
+} catch (err) {
+  console.error("❌ Error al decodificar GOOGLE_CREDENTIALS_BASE64:", err);
+  process.exit(1);
+}
+
+const visionClient = new ImageAnnotatorClient({ credentials });
+
+const eleven = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
 });
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-app.get("/", (req, res) => {
-  res.send("Hello from the backend!");
-});
-
+// =========================
+// ENDPOINT
+// =========================
 app.post("/api/speak", async (req, res) => {
   try {
     const { image } = req.body;
-    if (!image) {
-      return res.status(400).send("No se proporcionó ninguna imagen.");
+    const buffer = Buffer.from(image.split(",")[1], "base64");
+
+    // OCR
+    const [result] = await visionClient.textDetection(buffer);
+    const text = result.textAnnotations?.[0]?.description?.trim() || "";
+
+    if (!text) {
+      return res.status(404).send("No text detected");
     }
 
-    const imageBuffer = Buffer.from(image.split(",")[1], "base64");
-
-    const [result] = await visionClient.textDetection(imageBuffer);
-    const detections = result.textAnnotations;
-    const recognizedText = detections?.[0]?.description?.trim() || "";
-
-    if (!recognizedText) {
-      return res.status(404).send("No se pudo reconocer texto en la imagen.");
-    }
-
-    const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
-
-    const audio = await elevenlabsClient.generate({
-      voice: voiceId,
-      text: recognizedText,
+    // TTS
+    const audio = await eleven.generate({
+      voice: process.env.ELEVENLABS_VOICE_ID,
+      text,
       model_id: "eleven_multilingual_v2",
     });
 
     res.set("Content-Type", "audio/mpeg");
     audio.pipe(res);
-
-  } catch (error) {
-    console.error("Error en el endpoint /api/speak:", error);
-    res.status(500).send("Ocurrió un error en el servidor.");
+  } catch (err) {
+    console.error("Error en /api/speak:", err);
+    res.status(500).send("Server error");
   }
 });
 
-app.listen(port, () => {
-  console.log(`Servidor corriendo en http://localhost:${port}`);
-});
-
+app.listen(port, () => console.log(`Servidor en puerto ${port}`));
