@@ -19,7 +19,7 @@ const credentials = JSON.parse(
   Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64!, "base64").toString()
 );
 
-const visionClient = new textToSpeech.TextToSpeechClient({
+const visionClient = new vision.ImageAnnotatorClient({
   credentials,
   projectId: credentials.project_id,
 });
