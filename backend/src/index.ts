@@ -15,13 +15,17 @@ const port = process.env.PORT || 3001;
 // Aplicar el middleware CORS globalmente y al principio
 app.use(cors());
 
+const credentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
+if (!credentialsBase64) {
+  throw new Error("GOOGLE_CREDENTIALS_BASE64 no está definida");
+}
+
 const credentials = JSON.parse(
-  Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64!, "base64").toString()
+  Buffer.from(credentialsBase64, "base64").toString("utf8")
 );
 
-const visionClient = new vision.ImageAnnotatorClient({
+const visionClient = new ImageAnnotatorClient({
   credentials,
-  projectId: credentials.project_id,
 });
 
 const elevenlabsClient = new ElevenLabsClient({
