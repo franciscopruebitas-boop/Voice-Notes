@@ -5,7 +5,7 @@ import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { ElevenLabsClient } from "elevenlabs";
 import { Readable } from "stream";
 import { JWT } from "google-auth-library";
-
+import vision from "@google-cloud/vision";
 
 dotenv.config();
 
