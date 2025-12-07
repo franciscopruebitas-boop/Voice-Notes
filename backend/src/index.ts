@@ -13,7 +13,10 @@ const port = process.env.PORT || 3001;
 // Aplicar el middleware CORS globalmente y al principio
 app.use(cors());
 
-const visionClient = new ImageAnnotatorClient();
+const visionClient = new ImageAnnotatorClient({
+  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON),
+});
+
 const elevenlabsClient = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
 });
