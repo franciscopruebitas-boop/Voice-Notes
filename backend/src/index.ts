@@ -14,7 +14,7 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 
 const visionClient = new ImageAnnotatorClient({
-  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON),
+  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON ?? "{}"),
 });
 
 const elevenlabsClient = new ElevenLabsClient({
