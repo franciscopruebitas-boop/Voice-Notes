@@ -6,6 +6,18 @@ import { ImageAnnotatorClient } from "@google-cloud/vision";
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 
+
+import cors from "cors";
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://voice-notes-frontend.onrender.com";
+
+app.use(cors({
+  origin: FRONTEND_URL,
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"],
+}));
+
+
 // Ruta donde Render espera encontrar las credenciales
 const credentialsPath = "/opt/render/project/src/service-account.json";
 
