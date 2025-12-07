@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { ElevenLabsClient } from "elevenlabs";
+import vision from "@google-cloud/vision";
+
 
 dotenv.config();
 
@@ -15,30 +17,8 @@ app.use(express.json({ limit: "10mb" }));
 // ============================
 // GOOGLE VISION - CREDENCIALES
 // ============================
-const base64 = process.env.GOOGLE_CREDENTIALS_BASE64;
 
-if (!base64) {
-  console.error("❌ ERROR: GOOGLE_CREDENTIALS_BASE64 no está definida");
-  process.exit(1);
-}
-
-let credentials;
-
-try {
-  const json = Buffer.from(base64, "base64").toString("utf8");
-  credentials = JSON.parse(json);
-
-  if (!credentials.client_email || !credentials.private_key) {
-    throw new Error("Credenciales incompletas");
-  }
-
-  console.log("✔ Credenciales de Google cargadas correctamente");
-} catch (err) {
-  console.error("❌ Error al decodificar GOOGLE_CREDENTIALS_BASE64:", err);
-  process.exit(1);
-}
-
-const visionClient = new ImageAnnotatorClient({ credentials });
+const visionClient = new vision.ImageAnnotatorClient();
 
 const eleven = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
