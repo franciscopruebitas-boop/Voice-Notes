@@ -1,48 +1,75 @@
 import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
-import { ElevenLabsClient } from "elevenlabs";
-
-dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3001;
-
-app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-// GOOGLE VISION (con archivo)
-const visionClient = new ImageAnnotatorClient({
-  keyFilename: "/opt/render/project/src/service-account.json",
-});
+// Ruta donde Render espera encontrar las credenciales
+const credentialsPath = "/opt/render/project/src/service-account.json";
 
-const eleven = new ElevenLabsClient({
-  apiKey: process.env.ELEVENLABS_API_KEY,
-});
+// =============================
+//  CARGA DE CREDENCIALES GOOGLE
+// =============================
+function ensureGoogleCredentials() {
+  const jsonString = process.env.GOOGLE_CREDENTIALS_JSON;
 
-app.post("/api/speak", async (req, res) => {
+  if (!jsonString) {
+    console.error("❌ ERROR: GOOGLE_CREDENTIALS_JSON no está definida en Render");
+    return;
+  }
+
   try {
-    const { image } = req.body;
-    const buffer = Buffer.from(image.split(",")[1], "base64");
+    // Crear el archivo si NO existe
+    if (!fs.existsSync(credentialsPath)) {
+      fs.writeFileSync(credentialsPath, jsonString);
+      console.log("✔ Credenciales de Google generadas correctamente.");
+    }
 
-    const [result] = await visionClient.textDetection(buffer);
-    const text = result.textAnnotations?.[0]?.description?.trim() || "";
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
+  } catch (err) {
+    console.error("❌ Error creando archivo de credenciales:", err);
+  }
+}
 
-    if (!text) return res.status(404).send("No text detected");
+ensureGoogleCredentials();
 
-    const audio = await eleven.generate({
-      voice: process.env.ELEVENLABS_VOICE_ID,
-      text,
-      model_id: "eleven_multilingual_v2",
+// =============================
+//  GOOGLE VISION CLIENT
+// =============================
+const visionClient = new ImageAnnotatorClient({
+  keyFilename: credentialsPath,
+});
+
+// =============================
+//     ENDPOINT DE EJEMPLO
+// =============================
+app.post("/api/vision", async (req, res) => {
+  try {
+    const { imageBase64 } = req.body;
+
+    if (!imageBase64) {
+      return res.status(400).json({ error: "imageBase64 requerido" });
+    }
+
+    const [result] = await visionClient.textDetection({
+      image: { content: imageBase64 },
     });
 
-    res.set("Content-Type", "audio/mpeg");
-    audio.pipe(res);
+    const detections = result.textAnnotations?.[0]?.description || "";
+
+    res.json({ text: detections });
   } catch (err) {
-    console.error("Error en /api/speak:", err);
-    res.status(500).send("Server error");
+    console.error("Error en Vision:", err);
+    res.status(500).json({ error: "Error procesando imagen" });
   }
 });
 
-app.listen(port, () => console.log(`Servidor en puerto ${port}`));
+// =============================
+//       INICIAR SERVIDOR
+// =============================
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`Servidor en puerto ${PORT}`);
+});
