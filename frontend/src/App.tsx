@@ -10,7 +10,11 @@ function App() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   // Obtener la URL del backend desde las variables de entorno de Vite
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+  let backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+  // Asegurarse de que la URL del backend no termine con una barra
+  if (backendUrl.endsWith("/")) {
+    backendUrl = backendUrl.slice(0, -1);
+  }
 
   useEffect(() => {
     const handleResize = () => {
@@ -37,7 +41,7 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${backendUrl}/api/speak`, {
+      const response = await fetch(`${backendUrl}api/speak`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: imageDataUrl }),
