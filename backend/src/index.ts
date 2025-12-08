@@ -51,11 +51,14 @@ function ensureGoogleCredentials() {
   }
 }
 
+// 👇👇 **ESTA ES LA LÍNEA QUE FALTABA**
+ensureGoogleCredentials();
+
 // =============================
 //  GOOGLE VISION CLIENT
 // =============================
 const visionClient = new ImageAnnotatorClient({
-  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  keyFilename: keyPath,
 });
 
 // =============================
