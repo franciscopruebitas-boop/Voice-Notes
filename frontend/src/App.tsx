@@ -33,7 +33,7 @@ function App() {
 
   const handleSpeak = async () => {
     if (!canvasRef.current) return;
-    const imageDataUrl = canvasRef.current.toDataURL("image/png");
+    const imageDataUrl = canvasRef.current.toDataURL();
     if (!imageDataUrl) {
       setError("No se pudo obtener la imagen del lienzo.");
       return;
