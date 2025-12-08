@@ -2,6 +2,7 @@ import express from "express";
 import fs from "fs";
 import cors from "cors";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
+import path from "path";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
