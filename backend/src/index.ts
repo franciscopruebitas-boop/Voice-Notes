@@ -61,7 +61,7 @@ app.post("/api/speak", async (req, res) => {
     const { image } = req.body;
 
     if (!image) {
-      return res.status(400).json({ error: "imageBase64 requerido" });
+      return res.status(400).json({ error: "image requerido" });
     }
 
     // FIX: regex correcta
