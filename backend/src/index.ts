@@ -2,7 +2,6 @@ import express from "express";
 import fs from "fs";
 import cors from "cors";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
-import fetch from "node-fetch";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -87,7 +86,7 @@ app.post("/api/speak", async (req, res) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "xi-api-key": process.env.ELEVEN_API_KEY,
+          "xi-api-key": process.env.ELEVENLABS_API_KEY,
         },
         body: JSON.stringify({
           text: recognizedText,
