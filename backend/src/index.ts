@@ -26,6 +26,8 @@ app.use(
 const credentialsPath = "/opt/render/project/src/backend/service-account.json";
 
 function ensureGoogleCredentials() {
+  console.log("📌 PATH USADO PARA CREDENCIALES:", credentialsPath);
+
   const jsonString = process.env.GOOGLE_CREDENTIALS_JSON;
 
   if (!jsonString) {
@@ -34,12 +36,10 @@ function ensureGoogleCredentials() {
   }
 
   try {
-    // siempre sobrescribimos por si cambia
     fs.writeFileSync(credentialsPath, jsonString);
     console.log("✔ Credenciales de Google generadas correctamente.");
 
     process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-
   } catch (err) {
     console.error("❌ Error creando archivo de credenciales:", err);
   }
