@@ -44,7 +44,7 @@ function App() {
       const response = await fetch(`${backendUrl}/api/speak`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageDataUrl }),
+        body: JSON.stringify({ imageBase64: imageDataUrl }),
       });
       if (!response.ok) {
         const errorText = await response.text();
