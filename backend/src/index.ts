@@ -22,7 +22,8 @@ app.use(
 // =============================
 //  CARGA DE CREDENCIALES GOOGLE
 // =============================
-const credentialsPath = "/opt/render/project/src/service-account.json";
+
+const credentialsPath = "/opt/render/project/src/backend/service-account.json";
 
 function ensureGoogleCredentials() {
   const jsonString = process.env.GOOGLE_CREDENTIALS_JSON;
@@ -33,18 +34,16 @@ function ensureGoogleCredentials() {
   }
 
   try {
-    if (!fs.existsSync(credentialsPath)) {
-      fs.writeFileSync(credentialsPath, jsonString);
-      console.log("✔ Credenciales de Google generadas correctamente.");
-    }
+    // siempre sobrescribimos por si cambia
+    fs.writeFileSync(credentialsPath, jsonString);
+    console.log("✔ Credenciales de Google generadas correctamente.");
 
     process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
+
   } catch (err) {
     console.error("❌ Error creando archivo de credenciales:", err);
   }
 }
-
-ensureGoogleCredentials();
 
 // =============================
 //  GOOGLE VISION CLIENT
