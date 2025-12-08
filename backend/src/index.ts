@@ -51,8 +51,10 @@ const credentialsPath = "/opt/render/project/src/service-account.json";
 // =============================
 //  GOOGLE VISION CLIENT
 // =============================
-const visionClient = new ImageAnnotatorClient({
-  geyFilename: credentialsPath,
+import vision from "@google-cloud/vision";
+
+const clientVision = new vision.ImageAnnotatorClient({
+  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 });
 
 // =============================
