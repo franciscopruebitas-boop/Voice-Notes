@@ -23,7 +23,7 @@ app.use(
 //  CARGA DE CREDENCIALES GOOGLE
 // =============================
 
-const credentialsPath = "/opt/render/project/src/backend/service-account.json";
+const credentialsPath = "/opt/render/project/src/service-account.json";
 
 function ensureGoogleCredentials() {
   console.log("📌 PATH USADO PARA CREDENCIALES:", credentialsPath);
