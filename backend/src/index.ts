@@ -25,28 +25,28 @@ const credentialsPath = "/opt/render/project/src/service-account.json";
 // =============================
 //  CARGA DE CREDENCIALES SEOOGLE
 // =============================
-function ensureGoogleCredentials() {
-  const jsonString = process.env.GOOGLE_CREDENTIALS_JSON;
+  function ensureGoogleCredentials() {
+    const jsonString = process.env.GOOGLE_CREDENTIALS_JSON;
 
-  if (!jsonString) {
-    console.error("❏ ERROR: GOOGLE_CREDENTIALS_JSON no está definida en Render");
-    return;
-  }
-
-  try {
-    // Crear el archivo si NO existe
-    if (!fs.existsSync(credentialsPath)) {
-      fs.writeFileSync(credentialsPath, jsonString);
-      console.log("❤ Credenciales de Google generadas correctamente,");
+    if (!jsonString) {
+      console.error("❌ ERROR: GOOGLE_CREDENTIALS_JSON no está definida en Render");
+      return;
     }
 
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-  } catch (err) {
-    console.error("❏ Error creando archivo de credenciales:", err);
-  }
-}
+    try {
+      // Crear el archivo si NO existe
+      if (!fs.existsSync(credentialsPath)) {
+        fs.writeFileSync(credentialsPath, jsonString);
+        console.log("✔ Credenciales de Google generadas correctamente.");
+      }
 
-ensureGoogleCredentials();
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
+    } catch (err) {
+      console.error("❌ Error creando archivo de credenciales:", err);
+    }
+  }
+
+  ensureGoogleCredentials();
 
 // =============================
 //  GOOGLE VISION CLIENT
