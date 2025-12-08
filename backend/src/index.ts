@@ -21,39 +21,75 @@ app.use(
 //  GOOGLE VISION CLIENT
 // =============================
 let visionClient: ImageAnnotatorClient;
+let credentialsLoaded = false;
+
+console.log("🔍 Verificando variables de entorno...");
+console.log("GOOGLE_CREDENTIALS_JSON existe:", !!process.env.GOOGLE_CREDENTIALS_JSON);
+console.log("ELEVENLABS_API_KEY existe:", !!process.env.ELEVENLABS_API_KEY);
 
 try {
-  // Intenta cargar las credenciales desde la variable de entorno
   const credentialsJSON = process.env.GOOGLE_CREDENTIALS_JSON;
   
   if (!credentialsJSON) {
-    throw new Error("❌ GOOGLE_CREDENTIALS_JSON no está definida en las variables de entorno");
+    throw new Error("GOOGLE_CREDENTIALS_JSON no está definida");
   }
+
+  console.log("📄 Longitud del JSON de credenciales:", credentialsJSON.length);
+  console.log("🔤 Primeros 50 caracteres:", credentialsJSON.substring(0, 50));
 
   // Parsea las credenciales
   const credentials = JSON.parse(credentialsJSON);
   
+  // Verifica campos importantes
+  console.log("✓ type:", credentials.type);
+  console.log("✓ project_id:", credentials.project_id);
+  console.log("✓ client_email:", credentials.client_email);
+  console.log("✓ private_key existe:", !!credentials.private_key);
+  console.log("✓ private_key longitud:", credentials.private_key?.length || 0);
+
+  // Verifica que el private_key tenga el formato correcto
+  if (!credentials.private_key || !credentials.private_key.includes("BEGIN PRIVATE KEY")) {
+    throw new Error("private_key no tiene el formato correcto");
+  }
+
   // Inicializa el cliente con las credenciales directamente
   visionClient = new ImageAnnotatorClient({
     credentials: credentials,
+    projectId: credentials.project_id,
   });
   
+  credentialsLoaded = true;
   console.log("✅ Cliente de Google Vision inicializado correctamente");
 } catch (error) {
-  console.error("❌ Error al inicializar Google Vision:", error);
-  // Inicializa un cliente vacío para evitar errores de compilación
-  visionClient = new ImageAnnotatorClient();
+  console.error("❌ Error al inicializar Google Vision:");
+  console.error(error);
+  
+  if (error instanceof SyntaxError) {
+    console.error("⚠️  El JSON de credenciales está malformado");
+  }
 }
 
 // =============================
 //  HEALTH CHECK
 // =============================
 app.get("/", (req, res) => {
-  res.json({ status: "ok", message: "Voice Notes API funcionando" });
+  res.json({ 
+    status: "ok", 
+    message: "Voice Notes API funcionando",
+    credentialsLoaded: credentialsLoaded 
+  });
 });
 
 app.get("/health", (req, res) => {
-  res.json({ status: "healthy" });
+  res.json({ 
+    status: "healthy",
+    credentialsLoaded: credentialsLoaded,
+    envVars: {
+      googleCredentials: !!process.env.GOOGLE_CREDENTIALS_JSON,
+      elevenlabsKey: !!process.env.ELEVENLABS_API_KEY,
+      frontendUrl: !!process.env.FRONTEND_URL,
+    }
+  });
 });
 
 // =============================
@@ -67,10 +103,13 @@ app.post("/api/speak", async (req, res) => {
       return res.status(400).json({ error: "image requerido" });
     }
 
-    // Verificar que el cliente de Vision está inicializado
-    if (!visionClient) {
-      console.error("❌ Cliente de Vision no inicializado");
-      return res.status(500).json({ error: "Servicio de reconocimiento no disponible" });
+    // Verificar que las credenciales se cargaron
+    if (!credentialsLoaded) {
+      console.error("❌ Credenciales de Google no cargadas");
+      return res.status(500).json({ 
+        error: "Servicio de reconocimiento no disponible",
+        details: "Credenciales no inicializadas"
+      });
     }
 
     // Limpiar el base64
@@ -78,6 +117,7 @@ app.post("/api/speak", async (req, res) => {
     const imageBuffer = Buffer.from(base64Data, "base64");
 
     console.log("🔍 Procesando imagen con Google Vision...");
+    console.log("📊 Tamaño de imagen:", imageBuffer.length, "bytes");
 
     // Detectar texto en la imagen
     const [result] = await visionClient.textDetection({
@@ -87,7 +127,7 @@ app.post("/api/speak", async (req, res) => {
     const detections = result.textAnnotations;
     const recognizedText = detections?.[0]?.description?.trim() || "";
 
-    console.log("📝 Texto reconocido:", recognizedText);
+    console.log("📝 Texto reconocido:", recognizedText.substring(0, 100));
 
     if (!recognizedText) {
       return res.status(444).json({ error: "No se detectó texto en la imagen" });
@@ -140,11 +180,13 @@ app.post("/api/speak", async (req, res) => {
   } catch (error) {
     console.error("❌ ERROR EN /api/speak:", error);
     
-    // Proporcionar más detalles del error
     const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+    const errorStack = error instanceof Error ? error.stack : "";
+    
     res.status(500).json({ 
       error: "Error interno del servidor",
-      details: errorMessage 
+      details: errorMessage,
+      stack: errorStack 
     });
   }
 });
@@ -155,4 +197,5 @@ app.post("/api/speak", async (req, res) => {
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor en puerto ${PORT}`);
+  console.log(`🌍 Frontend permitido: ${FRONTEND_URL}`);
 });
