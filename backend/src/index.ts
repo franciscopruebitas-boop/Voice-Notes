@@ -27,10 +27,10 @@ app.use(
 console.log("📂 Directorio actual:", process.cwd());
 console.log("📁 Archivos en runtime:", fs.readdirSync(process.cwd()));
 
-const credentialsPath = path.join(process.cwd(), "service-account.json");
+const keyPath = path.resolve(__dirname, "..", "service-account.json");
 
 function ensureGoogleCredentials() {
-  console.log("📌 PATH USADO PARA CREDENCIALES:", credentialsPath);
+  console.log("📌 PATH USADO PARA CREDENCIALES:", keyPath);
 
   const jsonString = process.env.GOOGLE_CREDENTIALS_JSON;
 
@@ -40,12 +40,12 @@ function ensureGoogleCredentials() {
   }
 
   try {
-    console.log("Intentando crear credenciales en:", credentialsPath);
+    console.log("Intentando crear credenciales en:", keyPath);
 
-    fs.writeFileSync(credentialsPath, jsonString);
+    fs.writeFileSync(keyPath, jsonString);
     console.log("✔ Credenciales de Google generadas correctamente.");
 
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
   } catch (err) {
     console.error("❌ Error creando archivo de credenciales:", err);
   }
