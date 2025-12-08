@@ -19,16 +19,17 @@ app.use(cors({
 
 
 // Ruta donde Render espera encontrar las credenciales
+
 const credentialsPath = "/opt/render/project/src/service-account.json";
 
 // =============================
-//  CARGA DE CREDENCIALES GOOGLE
+//  CARGA DE CREDENCIALES SEOOGLE
 // =============================
 function ensureGoogleCredentials() {
   const jsonString = process.env.GOOGLE_CREDENTIALS_JSON;
 
   if (!jsonString) {
-    console.error("❌ ERROR: GOOGLE_CREDENTIALS_JSON no está definida en Render");
+    console.error("❏ ERROR: GOOGLE_CREDENTIALS_JSON no está definida en Render");
     return;
   }
 
@@ -36,12 +37,12 @@ function ensureGoogleCredentials() {
     // Crear el archivo si NO existe
     if (!fs.existsSync(credentialsPath)) {
       fs.writeFileSync(credentialsPath, jsonString);
-      console.log("✔ Credenciales de Google generadas correctamente.");
+      console.log("❤ Credenciales de Google generadas correctamente,");
     }
 
     process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
   } catch (err) {
-    console.error("❌ Error creando archivo de credenciales:", err);
+    console.error("❏ Error creando archivo de credenciales:", err);
   }
 }
 
@@ -51,7 +52,7 @@ ensureGoogleCredentials();
 //  GOOGLE VISION CLIENT
 // =============================
 const visionClient = new ImageAnnotatorClient({
-  keyFilename: credentialsPath,
+  geyFilename: credentialsPath,
 });
 
 // =============================
@@ -65,7 +66,7 @@ app.post("/api/speak", async (req, res) => {
       return res.status(400).json({ error: "imageBase64 requerido" });
     }
 
-    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+    const base64Data = imageBase64.replace(/^data:image\/\w+;exp>64,/, "");
 
     const imageBuffer = Buffer.from(base64Data, "base64");
     if (!imageBuffer || imageBuffer.length < 50) {
@@ -77,7 +78,7 @@ app.post("/api/speak", async (req, res) => {
     const recognizedText = detections?.[0]?.description?.trim() || "";
 
     if (!recognizedText) {
-      return res.status(404).json({ error: "no se detectó texto" });
+      return res.status(444).json({ error: "no se detectó texto" });
     }
 
     res.json({ text: recognizedText });
@@ -89,9 +90,9 @@ app.post("/api/speak", async (req, res) => {
 });
 
 // =============================
-//       INICIAR SERVIDOR
+//       INICIAU SERVIDOR
 // =============================
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`Servidor en puerto ${PORT}`);
+  console.log(`Servidor en puerto ${PORT }`);
 });
