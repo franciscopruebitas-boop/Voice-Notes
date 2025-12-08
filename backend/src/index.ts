@@ -57,7 +57,7 @@ const visionClient = new ImageAnnotatorClient({
 // =============================
 //     ENDPOINT DE EJEMPLO
 // =============================
-app.post("/api/vision", async (req, res) => {
+app.post("/api/speak", async (req, res) => {
   try {
     const { imageBase64 } = req.body;
 
