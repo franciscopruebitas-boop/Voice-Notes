@@ -57,23 +57,33 @@ const visionClient = new ImageAnnotatorClient({
 // =============================
 //     ENDPOINT DE EJEMPLO
 // =============================
+
 app.post("/api/speak", async (req, res) => {
   try {
     const { imageBase64 } = req.body;
-
     if (!imageBase64) {
       return res.status(400).json({ error: "imageBase64 requerido" });
     }
 
-    const [result] = await visionClient.textDetection({
-      image: { content: imageBase64 },
-    });
+    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
 
-    const detections = result.textAnnotations?.[0]?.description || "";
+    const imageBuffer = Buffer.from(base64Data, "base64");
+    if (!imageBuffer || imageBuffer.length < 50) {
+      return res.status(400).json({ error: "imagen inválida" });
+    }
 
-    res.json({ text: detections });
-  } catch (err) {
-    console.error("Error en Vision:", err);
+    const [result] = await visionClient.textDetection(imageBuffer);
+    const detections = result.textAnnotations;
+    const recognizedText = detections?.[0]?.description?.trim() || "";
+
+    if (!recognizedText) {
+      return res.status(404).json({ error: "no se detectó texto" });
+    }
+
+    res.json({ text: recognizedText });
+
+  } catch (error) {
+    console.error("ERROR GOOGLE VISION:", error);
     res.status(500).json({ error: "Error procesando imagen" });
   }
 });
