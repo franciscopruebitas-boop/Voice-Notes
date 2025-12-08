@@ -26,7 +26,7 @@ app.use(
 console.log("📂 Directorio actual:", process.cwd());
 console.log("📁 Archivos en runtime:", fs.readdirSync(process.cwd()));
 
-const credentialsPath = `${process.cwd()}/service-account.json`;
+const credentialsPath = path.join(process.cwd(), "service-account.json");
 
 function ensureGoogleCredentials() {
   console.log("📌 PATH USADO PARA CREDENCIALES:", credentialsPath);
