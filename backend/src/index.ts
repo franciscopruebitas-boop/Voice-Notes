@@ -23,7 +23,10 @@ app.use(
 //  CARGA DE CREDENCIALES GOOGLE
 // =============================
 
-const credentialsPath = "./service-account.json";
+console.log("📂 Directorio actual:", process.cwd());
+console.log("📁 Archivos en runtime:", fs.readdirSync(process.cwd()));
+
+const credentialsPath = `${process.cwd()}/service-account.json`;
 
 function ensureGoogleCredentials() {
   console.log("📌 PATH USADO PARA CREDENCIALES:", credentialsPath);
@@ -36,6 +39,8 @@ function ensureGoogleCredentials() {
   }
 
   try {
+    console.log("Intentando crear credenciales en:", credentialsPath);
+
     fs.writeFileSync(credentialsPath, jsonString);
     console.log("✔ Credenciales de Google generadas correctamente.");
 
