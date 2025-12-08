@@ -58,23 +58,16 @@ const visionClient = new ImageAnnotatorClient({
 // =============================
 app.post("/api/speak", async (req, res) => {
   try {
-    const { image } = req.body;
+    const image = req.body.image;
 
     if (!image) {
       return res.status(400).json({ error: "image requerido" });
     }
 
-    // FIX: regex correcta
     const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
-
     const imageBuffer = Buffer.from(base64Data, "base64");
 
-    if (!imageBuffer || imageBuffer.length < 50) {
-      return res.status(400).json({ error: "imagen inválida" });
-    }
-
     const [result] = await visionClient.textDetection(imageBuffer);
-
     const detections = result.textAnnotations;
     const recognizedText = detections?.[0]?.description?.trim() || "";
 
@@ -82,10 +75,22 @@ app.post("/api/speak", async (req, res) => {
       return res.status(444).json({ error: "no se detectó texto" });
     }
 
-    res.json({ text: recognizedText });
+    // --- NUEVO: convertir a voz ---
+    const [tts] = await textToSpeechClient.synthesizeSpeech({
+      input: { text: recognizedText },
+      voice: { languageCode: "es-ES", ssmlGender: "NEUTRAL" },
+      audioConfig: { audioEncoding: "MP3" },
+    });
+
+    res.set({
+      "Content-Type": "audio/mpeg",
+      "Content-Length": tts.audioContent.length,
+    });
+
+    res.send(tts.audioContent);
   } catch (error) {
-    console.error("ERROR GOOGLE VISION:", error);
-    res.status(500).json({ error: "Error procesando imagen" });
+    console.error("ERROR:", error);
+    res.status(500).json({ error: "Error procesando la imagen o generando audio" });
   }
 });
 
