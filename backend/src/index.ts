@@ -79,7 +79,7 @@ app.post("/api/speak", async (req, res) => {
     // ==========================
     //     TEXT → SPEECH
     // ==========================
-    const voiceId = process.env.ELEVENLABS_VOICE_ID || "pNInz6obpgDQGcFmaJgB"; // default por si acaso
+    const voiceId = process.env.ELEVENLABS_VOICE_ID || "pNInz6obpgDQGcFmaJgB";
 
     const ttsResponse = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
@@ -87,7 +87,7 @@ app.post("/api/speak", async (req, res) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "xi-api-key": process.env.ELEVEN_API_KEY, // ya lo tienes en Render
+          "xi-api-key": process.env.ELEVEN_API_KEY,
         },
         body: JSON.stringify({
           text: recognizedText,
@@ -100,19 +100,21 @@ app.post("/api/speak", async (req, res) => {
       }
     );
 
-    // Si falla → log y error visible
     if (!ttsResponse.ok) {
       const err = await ttsResponse.text();
       console.error("❌ Error ElevenLabs:", err);
       return res.status(500).json({ error: "Error generando audio" });
     }
 
-    // Convertir a audio
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
 
-    // Enviar audio al frontend
     res.setHeader("Content-Type", "audio/mpeg");
     res.send(audioBuffer);
+
+  } catch (error) {
+    console.error("ERROR EN /api/speak:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
 });
 
 // =============================
