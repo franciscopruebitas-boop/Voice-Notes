@@ -22,6 +22,7 @@ app.use(
 // =============================
 let visionClient: ImageAnnotatorClient;
 let credentialsLoaded = false;
+let projectId = "";
 
 console.log("🔍 Inicializando Google Vision...");
 
@@ -32,31 +33,76 @@ try {
     throw new Error("GOOGLE_CREDENTIALS_JSON no está definida");
   }
 
-  // Parsea las credenciales
+  console.log("📄 Longitud del JSON:", credentialsJSON.length);
+
+  // Parsear y validar
   let credentials = JSON.parse(credentialsJSON);
   
-  // CRÍTICO: Procesar el private_key para convertir \n literales en saltos de línea
-  if (credentials.private_key) {
-    // Si el private_key tiene \\n como string literal, convertirlos a saltos de línea reales
-    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
-    
-    console.log("✓ private_key procesado correctamente");
-    console.log("✓ Empieza con BEGIN:", credentials.private_key.startsWith('-----BEGIN'));
-    console.log("✓ Termina con END:", credentials.private_key.includes('-----END'));
+  // Validaciones críticas
+  if (!credentials.type || credentials.type !== "service_account") {
+    throw new Error("El tipo de credencial no es 'service_account'");
+  }
+  
+  if (!credentials.private_key) {
+    throw new Error("No se encontró private_key en las credenciales");
+  }
+  
+  if (!credentials.client_email) {
+    throw new Error("No se encontró client_email en las credenciales");
+  }
+  
+  if (!credentials.project_id) {
+    throw new Error("No se encontró project_id en las credenciales");
   }
 
+  // Procesar el private_key - MÚLTIPLES INTENTOS
+  let privateKey = credentials.private_key;
+  
+  // Si tiene \\n literales, convertirlos
+  if (privateKey.includes('\\n')) {
+    console.log("⚠️  Detectados \\\\n literales, procesando...");
+    privateKey = privateKey.replace(/\\n/g, '\n');
+  }
+  
+  // Validar formato del private_key
+  if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
+    console.error("❌ El private_key no empieza con BEGIN PRIVATE KEY");
+    throw new Error("Formato de private_key inválido");
+  }
+  
+  if (!privateKey.includes('-----END PRIVATE KEY-----')) {
+    console.error("❌ El private_key no contiene END PRIVATE KEY");
+    throw new Error("Formato de private_key inválido");
+  }
+  
+  // Actualizar el private_key procesado
+  credentials.private_key = privateKey;
+  
+  projectId = credentials.project_id;
+  
   console.log("✓ type:", credentials.type);
   console.log("✓ project_id:", credentials.project_id);
   console.log("✓ client_email:", credentials.client_email);
+  console.log("✓ private_key_id:", credentials.private_key_id?.substring(0, 10) + "...");
+  console.log("✓ private_key longitud:", credentials.private_key.length);
+  console.log("✓ private_key empieza correctamente:", credentials.private_key.startsWith('-----BEGIN'));
+  console.log("✓ private_key termina correctamente:", credentials.private_key.endsWith('-----\n'));
 
-  // Inicializa el cliente con las credenciales procesadas
+  // Inicializar el cliente
   visionClient = new ImageAnnotatorClient({
-    credentials: credentials,
+    credentials: {
+      client_email: credentials.client_email,
+      private_key: credentials.private_key,
+    },
     projectId: credentials.project_id,
   });
   
   credentialsLoaded = true;
   console.log("✅ Cliente de Google Vision inicializado correctamente");
+  
+  // TEST: Intentar una llamada simple para verificar
+  console.log("🧪 Probando conexión con Google Cloud...");
+  
 } catch (error) {
   console.error("❌ Error al inicializar Google Vision:");
   console.error(error);
@@ -70,7 +116,8 @@ app.get("/", (req, res) => {
   res.json({ 
     status: "ok", 
     message: "Voice Notes API funcionando",
-    credentialsLoaded: credentialsLoaded 
+    credentialsLoaded: credentialsLoaded,
+    projectId: projectId 
   });
 });
 
@@ -78,6 +125,7 @@ app.get("/health", (req, res) => {
   res.json({ 
     status: "healthy",
     credentialsLoaded: credentialsLoaded,
+    projectId: projectId,
     envVars: {
       googleCredentials: !!process.env.GOOGLE_CREDENTIALS_JSON,
       elevenlabsKey: !!process.env.ELEVENLABS_API_KEY,
@@ -99,16 +147,17 @@ app.post("/api/speak", async (req, res) => {
     if (!credentialsLoaded) {
       console.error("❌ Credenciales de Google no cargadas");
       return res.status(500).json({ 
-        error: "Servicio de reconocimiento no disponible"
+        error: "Servicio de reconocimiento no disponible",
+        hint: "Las credenciales no se inicializaron correctamente"
       });
     }
 
-    // Limpiar el base64
     const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
     const imageBuffer = Buffer.from(base64Data, "base64");
 
     console.log("🔍 Procesando imagen con Google Vision...");
     console.log("📊 Tamaño de imagen:", imageBuffer.length, "bytes");
+    console.log("🔑 Usando proyecto:", projectId);
 
     // Detectar texto en la imagen
     const [result] = await visionClient.textDetection({
@@ -168,14 +217,21 @@ app.post("/api/speak", async (req, res) => {
 
     res.setHeader("Content-Type", "audio/mpeg");
     res.send(audioBuffer);
-  } catch (error) {
+    
+  } catch (error: any) {
     console.error("❌ ERROR EN /api/speak:", error);
     
-    const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+    // Logging detallado del error
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
+    console.error("Error details:", error.details);
+    
+    const errorMessage = error.message || "Error desconocido";
     
     res.status(500).json({ 
       error: "Error interno del servidor",
-      details: errorMessage
+      details: errorMessage,
+      code: error.code
     });
   }
 });
