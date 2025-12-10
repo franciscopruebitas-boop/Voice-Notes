@@ -16,23 +16,25 @@ function App() {
   const [size, setSize] = useState(5);
 
   const [history, setHistory] = useState<Stroke[]>([]);
-  const [_redoStack, setRedoStack] = useState<Stroke[]>([]);
+  const [redoStack, setRedoStack] = useState<Stroke[]>([]);
 
   const [showSizeMenu, setShowSizeMenu] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [theme, setTheme] = useState<"light"|"dark">(
+  const [theme, setTheme] = useState<"light" | "dark">(
     window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
   );
 
- // Backend URL
-  let backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+  // ================================
+  //  Backend URL
+  // ================================
+  let backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:10000";
   if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
 
   // ================================
-  //  Get Pointer Position
+  // Get Pointer Position
   // ================================
   const getPos = (e: React.MouseEvent | React.TouchEvent): Point => {
     const canvas = canvasRef.current!;
@@ -59,7 +61,7 @@ function App() {
     const ctx = canvas.getContext("2d")!;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "#ffffff"; // SIEMPRE BLANCO
+    ctx.strokeStyle = "#ffffff";
     ctxRef.current = ctx;
 
     redrawCanvas();
@@ -90,7 +92,7 @@ function App() {
   };
 
   // ================================
-  // Init + load saved strokes
+  // Init
   // ================================
   useEffect(() => {
     const saved = localStorage.getItem("drawing");
@@ -107,7 +109,7 @@ function App() {
   }, [history]);
 
   // ================================
-  // Drawing handlers
+  // Drawing
   // ================================
   const startDrawing = (e: any) => {
     const pos = getPos(e);
@@ -116,7 +118,7 @@ function App() {
 
     const newStroke: Stroke = {
       points: [pos],
-      size
+      size,
     };
 
     setHistory((h) => [...h, newStroke]);
@@ -138,7 +140,7 @@ function App() {
   const stopDrawing = () => setIsDrawing(false);
 
   // ================================
-  // Toolbar actions
+  // Undo / Redo
   // ================================
   const undo = () => {
     setHistory((h) => {
@@ -191,7 +193,7 @@ function App() {
       const res = await fetch(`${backendUrl}/api/speak`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageDataUrl })
+        body: JSON.stringify({ image: imageDataUrl }),
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -226,10 +228,10 @@ function App() {
         <button onClick={undo}>↩️</button>
         <button onClick={redo}>↪️</button>
         <button onClick={clearAll}>🆕</button>
-	<button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
-	  {theme === "light" ? "🌙 Oscuro" : "☀️ Claro"}
-	</button>
 
+        <button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+          {theme === "light" ? "🌙 Oscuro" : "☀️ Claro"}
+        </button>
 
         <button onClick={() => setShowSizeMenu(!showSizeMenu)}>📏</button>
 
