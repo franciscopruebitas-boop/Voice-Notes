@@ -85,6 +85,104 @@ app.get("/health", (req, res) => {
 // =============================
 //  ENDPOINT /api/speak
 // =============================
+//app.post("/api/speak", async (req, res) => {
+//  try {
+  //  const image = req.body.image;
+    
+ //   if (!image) {
+ //     return res.status(400).json({ error: "image requerido" });
+ //   }
+
+//    if (!credentialsLoaded) {
+ //     console.error("❌ Credenciales de Google no cargadas");
+  //    return res.status(500).json({ 
+   //     error: "Servicio no disponible"
+  //    });
+ //   }
+
+    // Limpiar el base64
+ //   const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+ //   const imageBuffer = Buffer.from(base64Data, "base64");
+
+ //   console.log("🔍 Procesando imagen con Google Vision...");
+
+    // Detectar texto en la imagen
+  //  const [result] = await visionClient.textDetection({
+  //    image: { content: imageBuffer },
+  //  });
+
+   // const detections = result.textAnnotations;
+  //  const recognizedText = detections?.[0]?.description?.trim() || "";
+
+  //  console.log("📝 Texto detectado:", recognizedText ? `"${recognizedText.substring(0, 50)}..."` : "ninguno");
+
+   // if (!recognizedText) {
+   //   return res.status(444).json({ error: "No se detectó texto en la imagen" });
+  //  }
+
+    // ==========================
+    //  TEXT → SPEECH (Google)
+    // ==========================
+  //  console.log("🔊 Generando audio con Google Text-to-Speech...");
+    
+  //    const [ttsResponse] = await ttsClient.synthesizeSpeech({
+  //    input: { text: recognizedText },
+  //    voice: {
+  //      languageCode: "es-ES",
+  //      name: "es-ES-Neural2-A"
+  //    },
+  //    audioConfig: {
+  //      audioEncoding: "MP3",
+  //      speakingRate: 1.02,
+  //      pitch: 0.0,
+  //      model: "latest"  // IMPORTANTE
+  //    }
+  //  });
+
+    //const [ttsResponse] = await ttsClient.synthesizeSpeech({
+     // input: { text: recognizedText },
+     // voice: { 
+      //  languageCode: 'es-ES',  // Español de España
+      //  name: 'es-ES-Neural2-A', // Voz neural femenina
+        // Otras opciones:
+        // 'es-ES-Neural2-B' - Voz masculina
+        // 'es-US-Neural2-A' - Español latinoamericano
+    //  },
+     // audioConfig: { 
+      //  audioEncoding: 'MP3',
+       // speakingRate: 1.0,  // Velocidad normal
+        //pitch: 0.0,         // Tono normal
+     // },
+    //});
+
+   // const audioBuffer = Buffer.from(ttsResponse.audioContent);
+    
+  //  console.log("✅ Audio generado correctamente, tamaño:", audioBuffer.length);
+
+//    res.setHeader("Content-Type", "audio/mpeg");
+//    res.send(audioBuffer);
+//  } catch (error) {
+//    console.error("❌ ERROR EN /api/speak:", error);
+    
+//    const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+    
+//    res.status(500).json({ 
+//      error: "Error interno del servidor",
+//      details: errorMessage
+//    });
+//  }
+//});
+
+///////////////////////////////////
+// =============================
+//  ENDPOINT /api/speak
+// =============================
+import { ElevenLabsClient } from "elevenlabs";
+
+const eleven = new ElevenLabsClient({
+  apiKey: process.env.ELEVENLABS_API_KEY,
+});
+
 app.post("/api/speak", async (req, res) => {
   try {
     const image = req.body.image;
@@ -120,50 +218,37 @@ app.post("/api/speak", async (req, res) => {
       return res.status(444).json({ error: "No se detectó texto en la imagen" });
     }
 
-    // ==========================
-    //  TEXT → SPEECH (Google)
-    // ==========================
-    console.log("🔊 Generando audio con Google Text-to-Speech...");
-    
-      const [ttsResponse] = await ttsClient.synthesizeSpeech({
-      input: { text: recognizedText },
-      voice: {
-        languageCode: "es-ES",
-        name: "es-ES-Neural2-A"
-      },
-      audioConfig: {
-        audioEncoding: "MP3",
-        speakingRate: 1.02,
-        pitch: 0.0,
-        model: "latest"  // IMPORTANTE
+    // ================================
+    //      TEXT → SPEECH ELEVENLABS
+    // ================================
+    console.log("🔊 Generando audio con ElevenLabs...");
+
+    const stream = await eleven.textToSpeech.convert(
+      "Lucía", // VOZ NATURAL EN ESPAÑOL
+      {
+        text: recognizedText,
+        model_id: "eleven_multilingual_v2",
+        voice_settings: {
+          stability: 0.20,
+          similarity_boost: 0.85,
+          style: 0.35,
+        },
       }
-    });
+    );
 
-    //const [ttsResponse] = await ttsClient.synthesizeSpeech({
-     // input: { text: recognizedText },
-     // voice: { 
-      //  languageCode: 'es-ES',  // Español de España
-      //  name: 'es-ES-Neural2-A', // Voz neural femenina
-        // Otras opciones:
-        // 'es-ES-Neural2-B' - Voz masculina
-        // 'es-US-Neural2-A' - Español latinoamericano
-    //  },
-     // audioConfig: { 
-      //  audioEncoding: 'MP3',
-       // speakingRate: 1.0,  // Velocidad normal
-        //pitch: 0.0,         // Tono normal
-     // },
-    //});
+    // Convertir stream → buffer
+    const chunks = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    const audioBuffer = Buffer.concat(chunks);
 
-    const audioBuffer = Buffer.from(ttsResponse.audioContent);
-    
-    console.log("✅ Audio generado correctamente, tamaño:", audioBuffer.length);
+    console.log("✅ Audio generado correctamente (ElevenLabs), tamaño:", audioBuffer.length);
 
     res.setHeader("Content-Type", "audio/mpeg");
     res.send(audioBuffer);
+
   } catch (error) {
     console.error("❌ ERROR EN /api/speak:", error);
-    
+
     const errorMessage = error instanceof Error ? error.message : "Error desconocido";
     
     res.status(500).json({ 
@@ -172,6 +257,12 @@ app.post("/api/speak", async (req, res) => {
     });
   }
 });
+
+///////////////////////////////////
+
+
+
+
 
 // =============================
 //       INICIAR SERVIDOR
