@@ -130,9 +130,13 @@ app.post("/api/speak", async (req, res) => {
 
   } catch (error) {
     console.error("❌ ERROR EN /api/speak:", error);
+
+    const errorMessage =
+      (error as any)?.message || JSON.stringify(error);
+
     res.status(500).json({
       error: "Error interno del servidor",
-      const errorMessage = (error as any)?.message || JSON.stringify(error);
+      details: errorMessage
     });
   }
 });
