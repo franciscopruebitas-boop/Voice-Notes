@@ -51,10 +51,10 @@ try {
 // =============================
 //  ELEVENLABS
 // =============================
-console.log("🔑 Cargando ElevenLabs API KEY:", !!process.env.ELEVEN_API_KEY);
+console.log("🔑 Cargando ElevenLabs API KEY:", !!process.env.ELEVENLABS_API_KEY);
 
 const eleven = new ElevenLabsClient({
-  apiKey: process.env.ELEVEN_API_KEY,  // Usa la variable del servidor
+  apiKey: process.env.ELEVENLABS_API_KEY,  // Usa la variable del servidor
 });
 
 // =============================
@@ -64,7 +64,7 @@ app.get("/", (req, res) => {
   res.json({
     status: "ok",
     googleLoaded: credentialsLoaded,
-    elevenKey: !!process.env.ELEVEN_API_KEY,
+    elevenKey: !!process.env.ELEVENLABS_API_KEY,
   });
 });
 
@@ -132,7 +132,7 @@ app.post("/api/speak", async (req, res) => {
     console.error("❌ ERROR EN /api/speak:", error);
     res.status(500).json({
       error: "Error interno del servidor",
-      details: error?.message || error,
+      const errorMessage = (error as any)?.message || JSON.stringify(error);
     });
   }
 });
