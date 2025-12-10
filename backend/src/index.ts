@@ -23,9 +23,7 @@ app.use(
 let visionClient: ImageAnnotatorClient;
 let credentialsLoaded = false;
 
-console.log("🔍 Verificando variables de entorno...");
-console.log("GOOGLE_CREDENTIALS_JSON existe:", !!process.env.GOOGLE_CREDENTIALS_JSON);
-console.log("ELEVENLABS_API_KEY existe:", !!process.env.ELEVENLABS_API_KEY);
+console.log("🔍 Inicializando Google Vision...");
 
 try {
   const credentialsJSON = process.env.GOOGLE_CREDENTIALS_JSON;
@@ -34,25 +32,24 @@ try {
     throw new Error("GOOGLE_CREDENTIALS_JSON no está definida");
   }
 
-  console.log("📄 Longitud del JSON de credenciales:", credentialsJSON.length);
-  console.log("🔤 Primeros 50 caracteres:", credentialsJSON.substring(0, 50));
-
   // Parsea las credenciales
-  const credentials = JSON.parse(credentialsJSON);
+  let credentials = JSON.parse(credentialsJSON);
   
-  // Verifica campos importantes
+  // CRÍTICO: Procesar el private_key para convertir \n literales en saltos de línea
+  if (credentials.private_key) {
+    // Si el private_key tiene \\n como string literal, convertirlos a saltos de línea reales
+    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    
+    console.log("✓ private_key procesado correctamente");
+    console.log("✓ Empieza con BEGIN:", credentials.private_key.startsWith('-----BEGIN'));
+    console.log("✓ Termina con END:", credentials.private_key.includes('-----END'));
+  }
+
   console.log("✓ type:", credentials.type);
   console.log("✓ project_id:", credentials.project_id);
   console.log("✓ client_email:", credentials.client_email);
-  console.log("✓ private_key existe:", !!credentials.private_key);
-  console.log("✓ private_key longitud:", credentials.private_key?.length || 0);
 
-  // Verifica que el private_key tenga el formato correcto
-  if (!credentials.private_key || !credentials.private_key.includes("BEGIN PRIVATE KEY")) {
-    throw new Error("private_key no tiene el formato correcto");
-  }
-
-  // Inicializa el cliente con las credenciales directamente
+  // Inicializa el cliente con las credenciales procesadas
   visionClient = new ImageAnnotatorClient({
     credentials: credentials,
     projectId: credentials.project_id,
@@ -63,10 +60,7 @@ try {
 } catch (error) {
   console.error("❌ Error al inicializar Google Vision:");
   console.error(error);
-  
-  if (error instanceof SyntaxError) {
-    console.error("⚠️  El JSON de credenciales está malformado");
-  }
+  credentialsLoaded = false;
 }
 
 // =============================
@@ -87,7 +81,6 @@ app.get("/health", (req, res) => {
     envVars: {
       googleCredentials: !!process.env.GOOGLE_CREDENTIALS_JSON,
       elevenlabsKey: !!process.env.ELEVENLABS_API_KEY,
-      frontendUrl: !!process.env.FRONTEND_URL,
     }
   });
 });
@@ -103,12 +96,10 @@ app.post("/api/speak", async (req, res) => {
       return res.status(400).json({ error: "image requerido" });
     }
 
-    // Verificar que las credenciales se cargaron
     if (!credentialsLoaded) {
       console.error("❌ Credenciales de Google no cargadas");
       return res.status(500).json({ 
-        error: "Servicio de reconocimiento no disponible",
-        details: "Credenciales no inicializadas"
+        error: "Servicio de reconocimiento no disponible"
       });
     }
 
@@ -127,7 +118,7 @@ app.post("/api/speak", async (req, res) => {
     const detections = result.textAnnotations;
     const recognizedText = detections?.[0]?.description?.trim() || "";
 
-    console.log("📝 Texto reconocido:", recognizedText.substring(0, 100));
+    console.log("📝 Texto detectado:", recognizedText ? `"${recognizedText.substring(0, 50)}..."` : "ninguno");
 
     if (!recognizedText) {
       return res.status(444).json({ error: "No se detectó texto en la imagen" });
@@ -173,7 +164,7 @@ app.post("/api/speak", async (req, res) => {
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
     
-    console.log("✅ Audio generado correctamente");
+    console.log("✅ Audio generado correctamente, tamaño:", audioBuffer.length);
 
     res.setHeader("Content-Type", "audio/mpeg");
     res.send(audioBuffer);
@@ -181,12 +172,10 @@ app.post("/api/speak", async (req, res) => {
     console.error("❌ ERROR EN /api/speak:", error);
     
     const errorMessage = error instanceof Error ? error.message : "Error desconocido";
-    const errorStack = error instanceof Error ? error.stack : "";
     
     res.status(500).json({ 
       error: "Error interno del servidor",
-      details: errorMessage,
-      stack: errorStack 
+      details: errorMessage
     });
   }
 });
