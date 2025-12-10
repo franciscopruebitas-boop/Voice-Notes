@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
+type Point = { x: number; y: number };
+
 type Stroke = {
-  points: { x: number; y: number }[];
+  points: Point[];
   color: string;
   size: number;
   erase: boolean;
@@ -18,11 +20,26 @@ function App() {
   const [eraseMode, setEraseMode] = useState(false);
 
   const [history, setHistory] = useState<Stroke[]>([]);
-  const [redoStack, setRedoStack] = useState<Stroke[]>([]);
+  const [redo, setRedo] = useState<Stroke[]>([]);
 
-  // ===========================
-  //   RESIZE CANVAS
-  // ===========================
+  // =============================
+  //      GET POINTER POSITION
+  // =============================
+  const getPos = (e: React.MouseEvent | React.TouchEvent): Point => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+
+    if ("touches" in e) {
+      const t = e.touches[0];
+      return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    }
+
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  // =============================
+  //       RESIZE CANVAS
+  // =============================
   const resizeCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -39,9 +56,9 @@ function App() {
     redrawCanvas();
   };
 
-  // ===========================
-  //   REDRAW HISTORY
-  // ===========================
+  // =============================
+  //       REDRAW HISTORY
+  // =============================
   const redrawCanvas = () => {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
@@ -65,9 +82,9 @@ function App() {
     ctx.globalCompositeOperation = "source-over";
   };
 
-  // ===========================
-  //   LOAD SAVED DRAWING
-  // ===========================
+  // =============================
+  //   INITIAL SETUP + LOAD
+  // =============================
   useEffect(() => {
     const saved = localStorage.getItem("drawing");
     if (saved) setHistory(JSON.parse(saved));
@@ -78,32 +95,18 @@ function App() {
     return () => window.removeEventListener("resize", resizeCanvas);
   }, []);
 
-  // Save drawing on change
   useEffect(() => {
-    localStorage.setItem("drawing", JSON.stringify(history));
     redrawCanvas();
+    localStorage.setItem("drawing", JSON.stringify(history));
   }, [history]);
 
-  // ===========================
-  //   DRAWING UTILS
-  // ===========================
-  const getPos = (e: MouseEvent | TouchEvent) => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-
-    if (e instanceof TouchEvent) {
-      const t = e.touches[0];
-      return { x: t.clientX - rect.left, y: t.clientY - rect.top };
-    }
-
-    const m = e as MouseEvent;
-    return { x: m.clientX - rect.left, y: m.clientY - rect.top };
-  };
-
-  const startDrawing = (e: MouseEvent | TouchEvent) => {
+  // =============================
+  //        DRAWING EVENTS
+  // =============================
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
     const pos = getPos(e);
     setIsDrawing(true);
-    setRedoStack([]); // clear redo stack when new stroke begins
+    setRedo([]); // clear redo stack
 
     const newStroke: Stroke = {
       points: [pos],
@@ -115,7 +118,7 @@ function App() {
     setHistory((h) => [...h, newStroke]);
   };
 
-  const draw = (e: MouseEvent | TouchEvent) => {
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDrawing) return;
     e.preventDefault();
 
@@ -132,20 +135,20 @@ function App() {
     setIsDrawing(false);
   };
 
-  // ===========================
-  //   TOOLBAR ACTIONS
-  // ===========================
+  // =============================
+  //         TOOLBAR
+  // =============================
   const undo = () => {
     setHistory((h) => {
       if (h.length === 0) return h;
       const last = h[h.length - 1];
-      setRedoStack((r) => [...r, last]);
+      setRedo((r) => [...r, last]);
       return h.slice(0, -1);
     });
   };
 
-  const redo = () => {
-    setRedoStack((r) => {
+  const redoAction = () => {
+    setRedo((r) => {
       if (r.length === 0) return r;
       const last = r[r.length - 1];
       setHistory((h) => [...h, last]);
@@ -155,17 +158,14 @@ function App() {
 
   const clearAll = () => {
     setHistory([]);
-    setRedoStack([]);
+    setRedo([]);
   };
 
-  const newNote = () => {
-    clearAll();
-  };
+  const newNote = () => clearAll();
 
   const exportImage = () => {
     const canvas = canvasRef.current!;
     const url = canvas.toDataURL("image/png");
-
     const a = document.createElement("a");
     a.href = url;
     a.download = "nota.png";
@@ -176,7 +176,7 @@ function App() {
     const canvas = canvasRef.current!;
     const base64 = canvas.toDataURL("image/png");
 
-    await fetch("https://TU_BACKEND/render", {
+    await fetch("https://TU_BACKEND_URL/api/speak", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ image: base64 }),
@@ -187,7 +187,6 @@ function App() {
     <div className="app">
       <h1 className="title">✍️ Voice Notes</h1>
 
-      {/* Canvas Area */}
       <div className="canvas-wrapper">
         <canvas
           ref={canvasRef}
@@ -201,10 +200,9 @@ function App() {
         />
       </div>
 
-      {/* TOOLS */}
       <div className="toolbar">
         <button onClick={undo}>↩️ Undo</button>
-        <button onClick={redo}>↪️ Redo</button>
+        <button onClick={redoAction}>↪️ Redo</button>
         <button onClick={newNote}>🆕 Nueva nota</button>
 
         <button
@@ -216,11 +214,7 @@ function App() {
 
         <label>
           🎨 Color
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-          />
+          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
         </label>
 
         <label>
