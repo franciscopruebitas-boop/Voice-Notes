@@ -153,16 +153,21 @@ app.post("/api/speak", async (req, res) => {
       'JBFqnCBsd6RMkjVDRZzb', // voice_id
       {
         text: recognizedText,
-        model_id: 'eleven_multilingual_v2',
-        output_format: 'mp3_44100_128',
+        modelId: 'eleven_multilingual_v2',
+        outputFormat: 'mp3_44100_128',
       }
     );
 
     // Convertir el stream a buffer
-    const chunks: Buffer[] = [];
-    for await (const chunk of audioStream) {
-      chunks.push(chunk);
+    const reader = audioStream.getReader();
+    const chunks: Uint8Array[] = [];
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(value);
     }
+    
     const audioBuffer = Buffer.concat(chunks);
 
     console.log("✅ Audio generado correctamente");
