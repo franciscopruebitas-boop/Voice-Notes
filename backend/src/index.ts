@@ -124,22 +124,36 @@ app.post("/api/speak", async (req, res) => {
     //  TEXT → SPEECH (Google)
     // ==========================
     console.log("🔊 Generando audio con Google Text-to-Speech...");
-
-    const [ttsResponse] = await ttsClient.synthesizeSpeech({
+    
+      const [ttsResponse] = await ttsClient.synthesizeSpeech({
       input: { text: recognizedText },
-      voice: { 
-        languageCode: 'es-ES',  // Español de España
-        name: 'es-ES-Neural2-A', // Voz neural femenina
+      voice: {
+        languageCode: "es-ES",
+        name: "es-ES-Neural2-A"
+      },
+      audioConfig: {
+        audioEncoding: "MP3",
+        speakingRate: 1.02,
+        pitch: 0.0,
+        model: "latest"  // IMPORTANTE
+      }
+    });
+
+    //const [ttsResponse] = await ttsClient.synthesizeSpeech({
+     // input: { text: recognizedText },
+     // voice: { 
+      //  languageCode: 'es-ES',  // Español de España
+      //  name: 'es-ES-Neural2-A', // Voz neural femenina
         // Otras opciones:
         // 'es-ES-Neural2-B' - Voz masculina
         // 'es-US-Neural2-A' - Español latinoamericano
-      },
-      audioConfig: { 
-        audioEncoding: 'MP3',
-        speakingRate: 1.0,  // Velocidad normal
-        pitch: 0.0,         // Tono normal
-      },
-    });
+    //  },
+     // audioConfig: { 
+      //  audioEncoding: 'MP3',
+       // speakingRate: 1.0,  // Velocidad normal
+        //pitch: 0.0,         // Tono normal
+     // },
+    //});
 
     const audioBuffer = Buffer.from(ttsResponse.audioContent);
     
