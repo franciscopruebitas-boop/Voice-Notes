@@ -10,35 +10,26 @@ type Stroke = {
   erase: boolean;
 };
 
-function App() {
+export default function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState("#000000");
-  const [size, setSize] = useState(5);
+  const [size, setSize] = useState(6);
   const [eraseMode, setEraseMode] = useState(false);
 
   const [history, setHistory] = useState<Stroke[]>([]);
-  const [_redo, setRedo] = useState<Stroke[]>([]);
+  const [redoStack, setRedo] = useState<Stroke[]>([]);
 
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-
-  // Obtener la URL del backend desde las variables de entorno de Vite
- 
   let backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
- 
-  // Asegurarse de que la URL del backend no termine con una barra
- 
-  if (backendUrl.endsWith("/")) {
-    backendUrl = backendUrl.slice(0, -1);
-  }
-
+  if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
 
   // =============================
-  //      GET POINTER POSITION
+  //     GET POINTER POSITION
   // =============================
   const getPos = (e: React.MouseEvent | React.TouchEvent): Point => {
     const canvas = canvasRef.current!;
@@ -48,12 +39,11 @@ function App() {
       const t = e.touches[0];
       return { x: t.clientX - rect.left, y: t.clientY - rect.top };
     }
-
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
   // =============================
-  //       RESIZE CANVAS
+  //      RESIZE CANVAS
   // =============================
   const resizeCanvas = () => {
     const canvas = canvasRef.current;
@@ -72,7 +62,7 @@ function App() {
   };
 
   // =============================
-  //       REDRAW HISTORY
+  //      REDRAW HISTORY
   // =============================
   const redrawCanvas = () => {
     const canvas = canvasRef.current;
@@ -83,8 +73,9 @@ function App() {
 
     history.forEach((stroke) => {
       ctx.lineWidth = stroke.size;
-      ctx.strokeStyle = stroke.erase ? "#fff" : stroke.color;
-      ctx.globalCompositeOperation = stroke.erase ? "destination-out" : "source-over";
+      ctx.strokeStyle = stroke.color;
+      ctx.globalCompositeOperation =
+        stroke.erase ? "destination-out" : "source-over";
 
       ctx.beginPath();
       stroke.points.forEach((p, i) => {
@@ -98,7 +89,7 @@ function App() {
   };
 
   // =============================
-  //   INITIAL SETUP + LOAD
+  //     INITIAL SETUP
   // =============================
   useEffect(() => {
     const saved = localStorage.getItem("drawing");
@@ -116,12 +107,12 @@ function App() {
   }, [history]);
 
   // =============================
-  //        DRAWING EVENTS
+  //    DRAWING HANDLERS
   // =============================
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
     const pos = getPos(e);
     setIsDrawing(true);
-    setRedo([]); // clear redo stack
+    setRedo([]);
 
     const newStroke: Stroke = {
       points: [pos],
@@ -138,26 +129,18 @@ function App() {
     e.preventDefault();
 
     const pos = getPos(e);
-
     setHistory((h) => {
-      const updated = [...h];
-      updated[updated.length - 1].points.push(pos);
-      return updated;
+      const copy = [...h];
+      copy[copy.length - 1].points.push(pos);
+      return copy;
     });
   };
 
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
+  const stopDrawing = () => setIsDrawing(false);
 
   // =============================
-  //         TOOLBAR
+  //        TOOLBAR
   // =============================
- 
-  {error && <p style={{ color: "red" }}>⚠️ {error}</p>}
-  {isLoading && <p>⏳ Procesando...</p>}
-
-
   const undo = () => {
     setHistory((h) => {
       if (h.length === 0) return h;
@@ -181,42 +164,62 @@ function App() {
     setRedo([]);
   };
 
-  const newNote = () => clearAll();
+  // =============================
+  //   OCR IMPROVED CANVAS (1024px)
+  // =============================
+  const getOCRCanvas = (): string => {
+    const off = document.createElement("canvas");
+    off.width = 1024;
+    off.height = 1024;
 
-  const exportImage = () => {
-    const canvas = canvasRef.current!;
-    const url = canvas.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "nota.png";
-    a.click();
+    const ctx = off.getContext("2d")!;
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, off.width, off.height);
+
+    // Reescalar strokes proporcionales
+    history.forEach((stroke) => {
+      ctx.lineWidth = stroke.size * 2; // más grueso para mejor OCR
+      ctx.strokeStyle = stroke.erase ? "white" : "black";
+      ctx.globalCompositeOperation =
+        stroke.erase ? "destination-out" : "source-over";
+
+      ctx.beginPath();
+      stroke.points.forEach((p, i) => {
+        const sx = (p.x / canvasRef.current!.width) * 1024;
+        const sy = (p.y / canvasRef.current!.height) * 1024;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      });
+      ctx.stroke();
+    });
+
+    ctx.globalCompositeOperation = "source-over";
+    return off.toDataURL("image/png");
   };
 
+  // =============================
+  //        SEND TO API
+  // =============================
   const sendToAPI = async () => {
-    if (!canvasRef.current) return;
-    const imageDataUrl = canvasRef.current.toDataURL();
-    if (!imageDataUrl) {
-      setError("No se pudo obtener la imagen del lienzo.");
-      return;
-    }
+    const imageDataUrl = getOCRCanvas();
+
     setIsLoading(true);
     setError(null);
+
     try {
-      const response = await fetch(`${backendUrl}/api/speak`, {
+      const res = await fetch(`${backendUrl}/api/speak`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: imageDataUrl }),
       });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error del servidor: ${errorText}`);
-      }
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audio.play();
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      new Audio(url).play();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ocurrió un error desconocido.");
+      setError(err instanceof Error ? err.message : "Error desconocido.");
     } finally {
       setIsLoading(false);
     }
@@ -239,10 +242,13 @@ function App() {
         />
       </div>
 
+      {error && <p className="error">{error}</p>}
+      {isLoading && <p className="loading">Procesando...</p>}
+
       <div className="toolbar">
         <button onClick={undo}>↩️ Undo</button>
         <button onClick={redoAction}>↪️ Redo</button>
-        <button onClick={newNote}>🆕 Nueva nota</button>
+        <button onClick={clearAll}>🆕 Nueva nota</button>
 
         <button
           onClick={() => setEraseMode(!eraseMode)}
@@ -253,7 +259,11 @@ function App() {
 
         <label>
           🎨 Color
-          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+          />
         </label>
 
         <label>
@@ -267,11 +277,8 @@ function App() {
           />
         </label>
 
-        <button onClick={exportImage}>📥 Exportar</button>
         <button onClick={sendToAPI}>🔊 Leer</button>
       </div>
     </div>
   );
 }
-
-export default App;
