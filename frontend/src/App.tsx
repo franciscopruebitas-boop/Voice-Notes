@@ -23,7 +23,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Backend URL
+  const [theme, setTheme] = useState<"light"|"dark">(
+    window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+  );
+
+ // Backend URL
   let backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
   if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
 
@@ -202,7 +206,7 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app theme-${theme}`}>
       <h1 className="title">✍️ Voice Notes (Dark)</h1>
 
       <div className="canvas-wrapper">
@@ -222,6 +226,10 @@ function App() {
         <button onClick={undo}>↩️</button>
         <button onClick={redo}>↪️</button>
         <button onClick={clearAll}>🆕</button>
+	<button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+	  {theme === "light" ? "🌙 Oscuro" : "☀️ Claro"}
+	</button>
+
 
         <button onClick={() => setShowSizeMenu(!showSizeMenu)}>📏</button>
 
