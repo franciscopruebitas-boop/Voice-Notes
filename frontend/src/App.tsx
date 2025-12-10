@@ -20,7 +20,7 @@ export default function App() {
   const [eraseMode, setEraseMode] = useState(false);
 
   const [history, setHistory] = useState<Stroke[]>([]);
-  const [redoStack, setRedo] = useState<Stroke[]>([]);
+  const [_redoStack, setRedo] = useState<Stroke[]>([]);
 
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
