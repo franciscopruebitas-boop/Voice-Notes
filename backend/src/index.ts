@@ -224,7 +224,7 @@ app.post("/api/speak", async (req, res) => {
     console.log("🔊 Generando audio con ElevenLabs...");
 
     const stream = await eleven.textToSpeech.convert(
-      "Lucía", // VOZ NATURAL EN ESPAÑOL
+      "SViKDEbKzJqnyyQeoxow", // VOZ NATURAL EN ESPAÑOL
       {
         text: recognizedText,
         model_id: "eleven_multilingual_v2",
