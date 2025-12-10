@@ -20,7 +20,6 @@ function App() {
   const [eraseMode, setEraseMode] = useState(false);
 
   const [history, setHistory] = useState<Stroke[]>([]);
-  const [redo, setRedo] = useState<Stroke[]>([]);
 
   // =============================
   //      GET POINTER POSITION
