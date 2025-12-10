@@ -113,8 +113,8 @@ app.post("/api/speak", async (req, res) => {
       "SViKDEbKzJqnyyQeoxow",   // Tu voz en español
       {
         text: recognizedText,
-        modelId: "eleven_multilingual_v2",
-        outputFormat: "mp3_44100_128",
+        model_id: "eleven_multilingual_v2",
+        output_format: "mp3_44100_128",
       }
     );
 
