@@ -22,6 +22,10 @@ function App() {
   const [history, setHistory] = useState<Stroke[]>([]);
   const [_redo, setRedo] = useState<Stroke[]>([]);
 
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+
   // Obtener la URL del backend desde las variables de entorno de Vite
  
   let backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
@@ -149,6 +153,11 @@ function App() {
   // =============================
   //         TOOLBAR
   // =============================
+ 
+  {error && <p style={{ color: "red" }}>⚠️ {error}</p>}
+  {isLoading && <p>⏳ Procesando...</p>}
+
+
   const undo = () => {
     setHistory((h) => {
       if (h.length === 0) return h;
