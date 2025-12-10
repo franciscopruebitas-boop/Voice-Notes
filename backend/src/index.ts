@@ -141,7 +141,7 @@ app.post("/api/speak", async (req, res) => {
       model: "gpt-4o-mini-tts",
       voice: "coral",
       input: recognizedText,
-      format: "mp3",
+      instructions: "Speak in a cheerful and positive tone."
     });
 
     const buffer = Buffer.from(await speech.arrayBuffer());
