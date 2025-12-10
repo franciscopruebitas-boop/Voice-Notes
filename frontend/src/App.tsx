@@ -22,6 +22,16 @@ function App() {
   const [history, setHistory] = useState<Stroke[]>([]);
   const [_redo, setRedo] = useState<Stroke[]>([]);
 
+  // Obtener la URL del backend desde las variables de entorno de Vite
+ 
+  let backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+ 
+  // Asegurarse de que la URL del backend no termine con una barra
+ 
+  if (backendUrl.endsWith("/")) {
+    backendUrl = backendUrl.slice(0, -1);
+  }
+
 
   // =============================
   //      GET POINTER POSITION
@@ -174,14 +184,33 @@ function App() {
   };
 
   const sendToAPI = async () => {
-    const canvas = canvasRef.current!;
-    const base64 = canvas.toDataURL("image/png");
-
-    await fetch("https://TU_BACKEND_URL/api/speak", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: base64 }),
-    });
+    if (!canvasRef.current) return;
+    const imageDataUrl = canvasRef.current.toDataURL();
+    if (!imageDataUrl) {
+      setError("No se pudo obtener la imagen del lienzo.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${backendUrl}/api/speak`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageDataUrl }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error del servidor: ${errorText}`);
+      }
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.play();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ocurrió un error desconocido.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
