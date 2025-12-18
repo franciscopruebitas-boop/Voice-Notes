@@ -16,12 +16,12 @@ function App() {
   const [size, setSize] = useState(5);
 
   const [history, setHistory] = useState<Stroke[]>([]);
-  const [redoStack, setRedoStack] = useState<Stroke[]>([]);
+  const [_redoStack, setRedoStack] = useState<Stroke[]>([]);
 
   const [showSizeMenu, setShowSizeMenu] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
 
   const [theme, setTheme] = useState<"light" | "dark">(
     window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
