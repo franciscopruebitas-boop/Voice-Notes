@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import textToSpeech from '@google-cloud/text-to-speech';
+import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -25,7 +26,7 @@ let visionClient: ImageAnnotatorClient;
 let ttsClient: any;
 let credentialsLoaded = false;
 
-console.log("🔍 Inicializando servicios de Google...");
+console.log("🔧 Inicializando servicios de Google...");
 
 try {
   const credentialsJSON = process.env.GOOGLE_CREDENTIALS_JSON;
@@ -65,13 +66,28 @@ try {
 }
 
 // =============================
+//  ELEVENLABS CLIENT
+// =============================
+let elevenLabsClient: ElevenLabsClient | null = null;
+
+if (process.env.ELEVENLABS_API_KEY) {
+  elevenLabsClient = new ElevenLabsClient({
+    apiKey: process.env.ELEVENLABS_API_KEY,
+  });
+  console.log("✅ ElevenLabs inicializado correctamente");
+} else {
+  console.warn("⚠️ ELEVENLABS_API_KEY no está definida");
+}
+
+// =============================
 //  HEALTH CHECK
 // =============================
 app.get("/", (req, res) => {
   res.json({ 
     status: "ok", 
     message: "Voice Notes API funcionando",
-    credentialsLoaded: credentialsLoaded 
+    credentialsLoaded: credentialsLoaded,
+    elevenLabsLoaded: !!elevenLabsClient
   });
 });
 
@@ -79,6 +95,7 @@ app.get("/health", (req, res) => {
   res.json({ 
     status: "healthy",
     credentialsLoaded: credentialsLoaded,
+    elevenLabsLoaded: !!elevenLabsClient
   });
 });
 
@@ -97,6 +114,13 @@ app.post("/api/speak", async (req, res) => {
       console.error("❌ Credenciales de Google no cargadas");
       return res.status(500).json({ 
         error: "Servicio no disponible"
+      });
+    }
+
+    if (!elevenLabsClient) {
+      console.error("❌ ElevenLabs no está inicializado");
+      return res.status(500).json({ 
+        error: "Servicio de audio no disponible"
       });
     }
 
@@ -121,32 +145,68 @@ app.post("/api/speak", async (req, res) => {
     }
 
     // ==========================
-    //  TEXT → SPEECH (Google)
+    //  TEXT → SPEECH (ElevenLabs)
     // ==========================
+    console.log("🔊 Generando audio con ElevenLabs...");
+
+    const audioStream = await elevenLabsClient.textToSpeech.convert(
+      'JBFqnCBsd6RMkjVDRZzb', // voice_id
+      {
+        text: recognizedText,
+        modelId: 'eleven_multilingual_v2',
+        outputFormat: 'mp3_44100_128',
+      }
+    );
+
+    // Convertir el stream a buffer
+    const reader = audioStream.getReader();
+    const chunks: Uint8Array[] = [];
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(value);
+    }
+    
+    const audioBuffer = Buffer.concat(chunks);
+
+    console.log("✅ Audio generado correctamente");
+
+    // Enviar el audio como respuesta
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.send(audioBuffer);
+
+    // ==========================
+    //  ALTERNATIVA: Google TTS (comentado por si acaso)
+    // ==========================
+    /*
     console.log("🔊 Generando audio con Google Text-to-Speech...");
 
-    const [ttsResponse] = await ttsClient.synthesizeSpeech({
+    const request = {
       input: { text: recognizedText },
       voice: { 
-        languageCode: 'es-ES',  // Español de España
-        name: 'es-ES-Neural2-A', // Voz neural femenina
-        // Otras opciones:
-        // 'es-ES-Neural2-B' - Voz masculina
-        // 'es-US-Neural2-A' - Español latinoamericano
+        languageCode: 'es-ES',
+        ssmlGender: 'NEUTRAL' as const
       },
       audioConfig: { 
-        audioEncoding: 'MP3',
-        speakingRate: 1.0,  // Velocidad normal
-        pitch: 0.0,         // Tono normal
+        audioEncoding: 'MP3' as const,
+        speakingRate: 1.0,
+        pitch: 0.0
       },
-    });
+    };
 
-    const audioBuffer = Buffer.from(ttsResponse.audioContent);
+    const [response] = await ttsClient.synthesizeSpeech(request);
     
-    console.log("✅ Audio generado correctamente, tamaño:", audioBuffer.length);
+    if (!response.audioContent) {
+      throw new Error("No se generó audio");
+    }
 
-    res.setHeader("Content-Type", "audio/mpeg");
-    res.send(audioBuffer);
+    console.log("✅ Audio generado correctamente");
+
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.send(response.audioContent);
+    */
+
   } catch (error) {
     console.error("❌ ERROR EN /api/speak:", error);
     
@@ -165,5 +225,5 @@ app.post("/api/speak", async (req, res) => {
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor en puerto ${PORT}`);
-  console.log(`🌍 Frontend permitido: ${FRONTEND_URL}`);
+  console.log(`🌐 Frontend permitido: ${FRONTEND_URL}`);
 });
