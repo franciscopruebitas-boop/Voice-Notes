@@ -150,7 +150,7 @@ app.post("/api/speak", async (req, res) => {
     console.log("🔊 Generando audio con ElevenLabs...");
 
     const audioStream = await elevenLabsClient.textToSpeech.convert(
-      'CdAqYBLnsNjmTqYgD5Ha', // voice_id
+      'aU1I83ZfUbBLWxxETWOh', // voice_id
       {
         text: recognizedText,
         modelId: 'eleven_multilingual_v2',
